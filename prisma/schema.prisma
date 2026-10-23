@@ -22,6 +22,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  portfolioMemberships PortfolioMember[]
 
   @@unique([email])
   @@map("user")
@@ -73,4 +74,38 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+
+enum PortfolioRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model Portfolio {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members PortfolioMember[]
+
+  @@map("portfolio")
+}
+
+model PortfolioMember {
+  portfolioId String
+  userId      String
+  role        PortfolioRole @default(VIEWER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([portfolioId, userId])
+  @@index([userId])
+  @@map("portfolio_member")
 }
