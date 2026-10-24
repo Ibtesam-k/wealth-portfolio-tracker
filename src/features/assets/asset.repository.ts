@@ -206,3 +206,16 @@ export async function inAssetTransaction<T>(
 export function canManageAssets(role: PortfolioRole) {
   return role === "OWNER" || role === "EDITOR";
 }
+
+
+export async function deleteForPortfolio(
+  assetId: string,
+  portfolioId: string,
+) {
+  return prisma.asset.deleteMany({
+    where: {
+      id: assetId,
+      portfolioId,
+    },
+  });
+}

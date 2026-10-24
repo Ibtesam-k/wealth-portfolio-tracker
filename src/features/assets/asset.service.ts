@@ -188,3 +188,29 @@ export async function createLedgerEntry(
     return assetRepository.createLedgerTransaction(assetId, entry, amount, transaction);
   });
 }
+
+export async function deleteAsset(
+  userId: string,
+  portfolioId: string,
+  assetId: string,
+) {
+  const membership = await requireMembership(userId, portfolioId);
+
+  if (!assetRepository.canManageAssets(membership.role)) {
+    throw new AssetServiceError(
+      "You do not have permission to delete this asset",
+      403,
+    );
+  }
+
+  const asset = await assetRepository.findAssetForPortfolio(
+    assetId,
+    portfolioId,
+  );
+
+  if (!asset) {
+    throw new AssetServiceError("Asset not found", 404);
+  }
+
+  await assetRepository.deleteForPortfolio(assetId, portfolioId);
+}

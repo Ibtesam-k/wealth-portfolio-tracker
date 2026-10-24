@@ -282,6 +282,34 @@ function AssetCard({
             </div>
         </details>
         )}
+        {canWrite && (
+        <button
+            type="button"
+            onClick={async () => {
+            if (!window.confirm(`Delete "${asset.name}"?`)) {
+                return;
+            }
+
+            const response = await fetch(
+                `/api/portfolios/${encodeURIComponent(portfolioId)}/assets/${encodeURIComponent(asset.id)}`,
+                {
+                method: "DELETE",
+                },
+            );
+
+            if (!response.ok) {
+                const result = await response.json() as { error?: string };
+                window.alert(result.error || "Unable to delete asset.");
+                return;
+            }
+
+            onTransactionCreated();
+            }}
+            className="mt-5 text-xs font-semibold text-red-700 underline underline-offset-4"
+        >
+            Delete asset
+        </button>
+        )}
     </li>
   );
 }
