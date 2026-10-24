@@ -1,21 +1,20 @@
+
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-
-type Portfolio = {
-  id: string;
-  name: string;
-  role: string | null;
-};
+import {
+  PortfolioSummaryCard,
+  type PortfolioSummary,
+} from "./portfolio-summary-card";
+import Link from "next/link";
 
 type PortfolioListResponse = {
-  portfolios?: Portfolio[];
+  portfolios?: PortfolioSummary[];
   error?: string;
 };
 
 export function PortfolioList() {
-  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -28,7 +27,7 @@ export function PortfolioList() {
       setError("");
 
       try {
-        const response = await fetch("/api/portfolios", {
+        const response = await fetch("/api/portfolio-summaries", {
           signal: controller.signal,
         });
         const result = (await response.json()) as PortfolioListResponse;
@@ -40,6 +39,7 @@ export function PortfolioList() {
         setPortfolios(result.portfolios ?? []);
       } catch (loadError) {
         if (controller.signal.aborted) return;
+
         setError(
           loadError instanceof Error
             ? loadError.message
@@ -56,7 +56,9 @@ export function PortfolioList() {
 
   return (
     <div className="mt-8 border-t border-[#e3e8e4] pt-6">
-      <h2 className="text-lg font-semibold text-[#1d2923]">Portfolio list</h2>
+      <h2 className="text-lg font-semibold text-[#1d2923]">
+        Portfolio overview
+      </h2>
 
       {isLoading && (
         <p className="mt-4 text-sm text-[#66736d]" role="status">
@@ -79,7 +81,9 @@ export function PortfolioList() {
 
       {!isLoading && !error && portfolios.length === 0 && (
         <div className="mt-4 border border-dashed border-[#cbd6cf] px-5 py-7">
-          <p className="text-sm text-[#66736d]">You haven&apos;t created a portfolio yet.</p>
+          <p className="text-sm text-[#66736d]">
+            You haven&apos;t created a portfolio yet.
+          </p>
           <Link
             href="/dashboard/portfolios/new"
             className="mt-4 inline-flex min-h-10 items-center justify-center border border-[#1d5744] px-4 text-sm font-semibold text-[#1d5744] transition-colors hover:bg-[#edf4f0]"
@@ -90,22 +94,9 @@ export function PortfolioList() {
       )}
 
       {!isLoading && !error && portfolios.length > 0 && (
-        <ul className="mt-4 divide-y divide-[#e3e8e4] border-y border-[#e3e8e4]">
+        <ul className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
           {portfolios.map((portfolio) => (
-            <li
-              key={portfolio.id}
-              className="border-b border-[#e3e8e4] last:border-b-0"
-            >
-              <Link
-                href={`/dashboard/portfolios/${encodeURIComponent(portfolio.id)}`}
-                className="flex min-h-16 flex-col justify-center gap-1 py-3 transition-colors hover:bg-[#f7f9f7] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-3"
-              >
-                <span className="font-medium text-[#1d2923]">{portfolio.name}</span>
-                <span className="text-sm capitalize text-[#66736d]">
-                  {portfolio.role?.toLowerCase() ?? "Member"}
-                </span>
-              </Link>
-            </li>
+            <PortfolioSummaryCard key={portfolio.id} portfolio={portfolio} />
           ))}
         </ul>
       )}
