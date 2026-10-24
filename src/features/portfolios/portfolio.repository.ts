@@ -183,3 +183,66 @@ export async function listPortfolioSummariesForUser(
     ORDER BY up.name ASC, ct.currency ASC
   `;
 }
+
+
+export async function listMembers(portfolioId: string) {
+  return prisma.portfolioMember.findMany({
+    where: { portfolioId },
+    select: {
+      role: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function findUserByEmail(email: string) {
+  return prisma.user.findUnique({
+    where: { email: email.trim().toLowerCase() },
+    select: { id: true, name: true, email: true },
+  });
+}
+
+export async function addMember(
+  portfolioId: string,
+  userId: string,
+  role: "OWNER" | "EDITOR" | "VIEWER",
+) {
+  return prisma.portfolioMember.create({
+    data: { portfolioId, userId, role },
+  });
+}
+
+export async function removeMember(
+  portfolioId: string,
+  userId: string,
+) {
+  return prisma.portfolioMember.deleteMany({
+    where: { portfolioId, userId },
+  });
+}
+
+
+export async function findMembership(
+  portfolioId: string,
+  userId: string,
+) {
+  return prisma.portfolioMember.findUnique({
+    where: {
+      portfolioId_userId: {
+        portfolioId,
+        userId,
+      },
+    },
+    select: {
+      role: true,
+    },
+  });
+}

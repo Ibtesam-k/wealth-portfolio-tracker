@@ -504,6 +504,14 @@ export function PortfolioDetail({ portfolioId }: { portfolioId: string }) {
                 </p>
                 <h1 className="mt-3 break-words text-3xl font-semibold tracking-tight">{portfolio.name}</h1>
               </div>
+            {portfolio.role === "OWNER" && (
+                    <Link
+                        href={`/dashboard/portfolios/${portfolioId}/members`}
+                        className="text-sm font-semibold text-[#1d5744] underline underline-offset-4"
+                    >
+                        Manage members
+                    </Link>
+            )}
             </div>
 
             <div className="mt-6">
