@@ -83,6 +83,22 @@ enum PortfolioRole {
   VIEWER
 }
 
+enum AssetType {
+  STOCK
+  CRYPTO
+  CASH
+  REAL_ESTATE
+}
+
+enum AssetTransactionType {
+  BUY
+  SELL
+  OPENING_BALANCE
+  DEPOSIT
+  WITHDRAWAL
+  ADJUSTMENT
+}
+
 model Portfolio {
   id        String   @id @default(cuid())
   name      String   @db.VarChar(100)
@@ -90,6 +106,7 @@ model Portfolio {
   updatedAt DateTime @updatedAt
 
   members PortfolioMember[]
+  assets  Asset[]
 
   @@map("portfolio")
 }
@@ -108,4 +125,82 @@ model PortfolioMember {
   @@id([portfolioId, userId])
   @@index([userId])
   @@map("portfolio_member")
+}
+
+model Asset {
+  id         String    @id @default(cuid())
+  portfolioId String
+  name       String    @db.VarChar(100)
+  type       AssetType
+  currency   String    @default("USD") @db.Char(3)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  portfolio  Portfolio          @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  tradable   TradableAsset?
+  cashAccount CashAccount?
+  realEstate RealEstateAsset?
+  transactions Transaction[]
+  valuations AssetValuation[]
+
+  @@index([portfolioId])
+  @@map("asset")
+}
+
+model TradableAsset {
+  assetId      String  @id
+  symbol       String  @db.VarChar(32)
+  currentPrice Decimal @db.Decimal(20, 8)
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("tradable_asset")
+}
+
+model CashAccount {
+  assetId String @id
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("cash_account")
+}
+
+model RealEstateAsset {
+  assetId String @id
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("real_estate_asset")
+}
+
+model Transaction {
+  id          String               @id @default(cuid())
+  assetId     String
+  type        AssetTransactionType
+  occurredAt  DateTime
+  note        String?              @db.VarChar(500)
+  quantity    Decimal?             @db.Decimal(28, 10)
+  unitPrice   Decimal?             @db.Decimal(20, 8)
+  amount      Decimal?             @db.Decimal(48, 18)
+  createdAt   DateTime             @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, occurredAt])
+  @@index([assetId, type])
+  @@map("asset_transaction")
+}
+
+model AssetValuation {
+  id             String   @id @default(cuid())
+  assetId        String
+  estimatedValue Decimal  @db.Decimal(38, 18)
+  effectiveAt    DateTime
+  note           String?  @db.VarChar(500)
+  createdAt      DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, effectiveAt, createdAt])
+  @@map("asset_valuation")
 }

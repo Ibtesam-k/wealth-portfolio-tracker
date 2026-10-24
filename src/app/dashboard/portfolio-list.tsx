@@ -94,12 +94,17 @@ export function PortfolioList() {
           {portfolios.map((portfolio) => (
             <li
               key={portfolio.id}
-              className="flex flex-col gap-1 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+              className="border-b border-[#e3e8e4] last:border-b-0"
             >
-              <span className="font-medium text-[#1d2923]">{portfolio.name}</span>
-              <span className="text-sm capitalize text-[#66736d]">
-                {portfolio.role?.toLowerCase() ?? "Member"}
-              </span>
+              <Link
+                href={`/dashboard/portfolios/${encodeURIComponent(portfolio.id)}`}
+                className="flex min-h-16 flex-col justify-center gap-1 py-3 transition-colors hover:bg-[#f7f9f7] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-3"
+              >
+                <span className="font-medium text-[#1d2923]">{portfolio.name}</span>
+                <span className="text-sm capitalize text-[#66736d]">
+                  {portfolio.role?.toLowerCase() ?? "Member"}
+                </span>
+              </Link>
             </li>
           ))}
         </ul>
