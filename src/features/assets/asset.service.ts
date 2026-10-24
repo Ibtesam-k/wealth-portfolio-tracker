@@ -4,6 +4,12 @@ import {
   validateAssetInput,
   validateLedgerTransaction,
 } from "./asset.validation";
+import {
+  calculateCashBalance,
+  calculateCurrentRecordedValue,
+  calculateTradableHoldings,
+  hasSufficientHoldings,
+} from "./asset.calculations";
 
 export class AssetServiceError extends Error {
   constructor(
@@ -27,21 +33,18 @@ async function requireMembership(userId: string, portfolioId: string) {
   return membership;
 }
 
-function decimalSum(values: ({ amount: Prisma.Decimal | null; type: string } | null)[]) {
-  return values.reduce((sum, transaction) => {
-    if (!transaction?.amount) return sum;
-    const signedAmount =
-      transaction.type === "WITHDRAWAL" ? transaction.amount.negated() : transaction.amount;
-    return sum.plus(signedAmount);
-  }, new Prisma.Decimal(0));
-}
-
 function serializeAsset(asset: Awaited<ReturnType<typeof assetRepository.listForPortfolio>>[number]) {
   const cashBalance =
     asset.type === "CASH"
-      ? decimalSum(asset.transactions).toString()
+      ? calculateCashBalance(asset.transactions, new Prisma.Decimal(0)).toString()
       : undefined;
   const latestValuation = asset.valuations[0];
+  const holdings = asset.tradable
+    ? calculateTradableHoldings(asset.transactions, new Prisma.Decimal(0))
+    : undefined;
+  const currentRecordedValue = holdings !== undefined && asset.tradable
+    ? calculateCurrentRecordedValue(holdings, asset.tradable.currentPrice)
+    : undefined;
 
   return {
     id: asset.id,
@@ -55,6 +58,8 @@ function serializeAsset(asset: Awaited<ReturnType<typeof assetRepository.listFor
       ? {
           symbol: asset.tradable.symbol,
           currentPrice: asset.tradable.currentPrice.toString(),
+          currentHoldings: holdings?.toString(),
+          currentRecordedValue: currentRecordedValue?.toString(),
         }
       : {}),
     ...(cashBalance !== undefined ? { cashBalance } : {}),
@@ -64,6 +69,16 @@ function serializeAsset(asset: Awaited<ReturnType<typeof assetRepository.listFor
           valuationEffectiveAt: latestValuation.effectiveAt,
         }
       : {}),
+    transactions: asset.transactions.map((transaction) => ({
+      id: transaction.id,
+      type: transaction.type,
+      occurredAt: transaction.occurredAt,
+      createdAt: transaction.createdAt,
+      note: transaction.note,
+      quantity: transaction.quantity?.toString() ?? null,
+      unitPrice: transaction.unitPrice?.toString() ?? null,
+      amount: transaction.amount?.toString() ?? null,
+    })),
   };
 }
 
@@ -72,30 +87,7 @@ export async function listAssets(userId: string, portfolioId: string) {
 
   const assets = await assetRepository.listForPortfolio(portfolioId);
 
-  return Promise.all(
-    assets.map(async (asset) => {
-      const serialized = serializeAsset(asset);
-
-      if (asset.type !== "STOCK" && asset.type !== "CRYPTO") {
-        return serialized;
-      }
-
-      const initialBuy = await assetRepository.findInitialBuy(asset.id);
-
-      return {
-        ...serialized,
-        initialBuy: initialBuy
-          ? {
-              type: initialBuy.type,
-              quantity: initialBuy.quantity?.toString() ?? null,
-              unitPrice: initialBuy.unitPrice?.toString() ?? null,
-              amount: initialBuy.amount?.toString() ?? null,
-              occurredAt: initialBuy.occurredAt,
-            }
-          : null,
-      };
-    }),
-  );
+  return assets.map(serializeAsset);
 }
 export async function createAsset(
   userId: string,
@@ -170,24 +162,29 @@ export async function createLedgerEntry(
     ? new Prisma.Decimal(entry.quantity!).times(new Prisma.Decimal(entry.unitPrice!)).toString()
     : entry.amount;
 
-  try {
-    return await assetRepository.inSerializableTransaction(async (transaction) => {
-      if (
-        entry.type === "OPENING_BALANCE" &&
-        (await assetRepository.hasOpeningBalance(assetId, transaction))
-      ) {
-        throw new AssetServiceError("An opening balance already exists", 409);
-      }
-      return assetRepository.createLedgerTransaction(assetId, entry, amount, transaction);
-    });
-  } catch (error) {
-    if (error instanceof AssetServiceError) throw error;
+  return assetRepository.inAssetTransaction(async (transaction) => {
+    await assetRepository.lockAssetForUpdate(assetId, transaction);
+
     if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2034"
+      entry.type === "OPENING_BALANCE" &&
+      (await assetRepository.hasOpeningBalance(assetId, transaction))
     ) {
-      throw new AssetServiceError("Could not safely record this transaction; retry", 409);
+      throw new AssetServiceError("An opening balance already exists", 409);
     }
-    throw error;
-  }
+
+    if (entry.type === "SELL") {
+      const transactions = await assetRepository.listTradableTransactions(assetId, transaction);
+      const holdings = calculateTradableHoldings(
+        transactions,
+        new Prisma.Decimal(0),
+      );
+      const requestedQuantity = new Prisma.Decimal(entry.quantity!);
+
+      if (!hasSufficientHoldings(holdings, requestedQuantity)) {
+        throw new AssetServiceError("Sell quantity exceeds current holdings", 409);
+      }
+    }
+
+    return assetRepository.createLedgerTransaction(assetId, entry, amount, transaction);
+  });
 }

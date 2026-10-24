@@ -28,8 +28,17 @@ export async function listForPortfolio(portfolioId: string) {
       updatedAt: true,
       tradable: { select: { symbol: true, currentPrice: true } },
       transactions: {
-        where: { amount: { not: null } },
-        select: { type: true, amount: true },
+        orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          type: true,
+          occurredAt: true,
+          createdAt: true,
+          note: true,
+          quantity: true,
+          unitPrice: true,
+          amount: true,
+        },
       },
       valuations: {
         orderBy: [{ effectiveAt: "desc" }, { createdAt: "desc" }],
@@ -148,6 +157,17 @@ export async function findAssetForPortfolio(assetId: string, portfolioId: string
   });
 }
 
+export async function lockAssetForUpdate(assetId: string, client: DbClient) {
+  await client.$queryRaw`SELECT "id" FROM "asset" WHERE "id" = ${assetId} FOR UPDATE`;
+}
+
+export async function listTradableTransactions(assetId: string, client: DbClient) {
+  return client.transaction.findMany({
+    where: { assetId, type: { in: ["BUY", "SELL"] } },
+    select: { type: true, quantity: true },
+  });
+}
+
 export async function hasOpeningBalance(
   assetId: string,
   client: DbClient = prisma,
@@ -177,32 +197,12 @@ export async function createLedgerTransaction(
   });
 }
 
-export async function inSerializableTransaction<T>(
+export async function inAssetTransaction<T>(
   operation: (client: DbClient) => Promise<T>,
 ) {
-  return prisma.$transaction(operation, { isolationLevel: "Serializable" });
+  return prisma.$transaction(operation, { isolationLevel: "ReadCommitted" });
 }
 
 export function canManageAssets(role: PortfolioRole) {
   return role === "OWNER" || role === "EDITOR";
-}
-
-export async function findInitialBuy(assetId: string) {
-  return prisma.transaction.findFirst({
-    where: {
-      assetId,
-      type: "BUY",
-      quantity: { not: null },
-      unitPrice: { not: null },
-      amount: { not: null },
-    },
-    orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
-    select: {
-      type: true,
-      quantity: true,
-      unitPrice: true,
-      amount: true,
-      occurredAt: true,
-    },
-  });
 }
