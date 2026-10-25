@@ -512,6 +512,12 @@ export function PortfolioDetail({ portfolioId }: { portfolioId: string }) {
                         Manage members
                     </Link>
             )}
+                    <Link
+        href={`/dashboard/portfolios/${portfolioId}/assistant`}
+                        className="text-sm font-semibold text-[#1d5744] underline underline-offset-4"
+        >
+        Ask AI assistant
+        </Link>
             </div>
 
             <div className="mt-6">

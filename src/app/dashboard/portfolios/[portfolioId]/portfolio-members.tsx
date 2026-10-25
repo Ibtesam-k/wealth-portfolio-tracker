@@ -63,9 +63,43 @@ export function PortfolioMembers({
     }
   }, [portfolioId]);
 
-  useEffect(() => {
-    void loadMembers();
-  }, [loadMembers]);
+useEffect(() => {
+  let cancelled = false;
+
+  async function fetchMembers() {
+    try {
+      const response = await fetch(
+        `/api/portfolios/${encodeURIComponent(portfolioId)}/members`,
+      );
+      const result = (await response.json()) as MembersResponse;
+
+      if (!response.ok) {
+        throw new Error(result.error || "Unable to load members.");
+      }
+
+      if (!cancelled) {
+        setMembers(result.members ?? []);
+        setError("");
+      }
+    } catch (err) {
+      if (!cancelled) {
+        setError(
+          err instanceof Error ? err.message : "Unable to load members.",
+        );
+      }
+    } finally {
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    }
+  }
+
+  void fetchMembers();
+
+  return () => {
+    cancelled = true;
+  };
+}, [portfolioId]);
 
   async function handleAddMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
