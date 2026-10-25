@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wealth Portfolio Tracker
+
+A web application for managing investment portfolios across stocks, cryptocurrency, cash, and real estate. Users can organize portfolios, manage member access, record financial activity, and view portfolio summaries. An AI assistant helps answer questions about portfolio data.
+
+## Features
+
+- **Authentication:** User registration, login, and logout.
+- **Portfolio management:** Create and view portfolios.
+- **Access control:** Manage portfolio membership with Owner, Editor, and Viewer roles.
+- **Asset tracking:** Record stocks, cryptocurrency, cash, and real estate.
+- **Financial activity:** Record transactions and asset valuations.
+- **Portfolio summaries:** View holdings and estimated values grouped by currency.
+- **AI assistant:** Ask questions about portfolio data through a read-only Gemini-powered assistant.
+
+## Tech Stack
+
+- Next.js App Router
+- React and TypeScript
+- Tailwind CSS
+- PostgreSQL
+- Prisma ORM
+- Better Auth
+- Google Gemini API
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js and npm
+- Docker with Docker Compose
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Ibtesam-k/wealth-portfolio-tracker.git
+cd wealth-portfolio-tracker
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure environment variables
+
+Create a `.env` file in the project root:
+
+```dotenv
+DATABASE_URL="postgresql://wealth_user:local_dev_password@localhost:5433/wealth_tracker?schema=public"
+BETTER_AUTH_SECRET="your-generated-secret"
+BETTER_AUTH_URL="http://localhost:3000"
+GEMINI_API_KEY="your-gemini-api-key"
+```
+
+Generate an authentication secret with:
+
+```bash
+openssl rand -base64 32
+```
+
+Replace the placeholder values with your
+
+&#x20;local configuration and Gemini API key. Keep `.env` out of version control.
+
+### 4. Start the database
+
+```bash
+docker compose up -d db
+```
+
+This starts PostgreSQL 17 on port `5433`.
+
+### 5. Apply database migrations
+
+```bash
+npx prisma migrate deploy
+```
+
+### 6. Start the application
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Development Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
 
-## Learn More
+## License
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+No license has been specified.
