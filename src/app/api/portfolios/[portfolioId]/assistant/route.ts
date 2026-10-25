@@ -117,24 +117,28 @@ ${question.trim()}`;
       },
     );
 
-    if (geminiResponse.status === 503) {
+
+    if (!geminiResponse.ok) {
+      const status = geminiResponse.status;
+
+      console.error("Gemini API request failed:", { status });
+
+      if (status === 429 || status === 503 || status >= 500) {
+        return NextResponse.json(
+          {
+            error:
+              "The AI service is temporarily unavailable. Please try again shortly.",
+          },
+          { status: 503 },
+        );
+      }
+
       return NextResponse.json(
-        {
-          error:
-            "The AI service is temporarily busy. Please try again shortly.",
-        },
-        { status: 503 },
+        { error: "The AI service could not process your request." },
+        { status: 502 },
       );
     }
 
-if (!geminiResponse.ok) {
-  const errorBody = await geminiResponse.text();
-
-  console.error("Gemini API error:", {
-    status: geminiResponse.status,
-    body: errorBody,
-  });
-}
 
     const result =
       (await geminiResponse.json()) as GeminiResponse;
